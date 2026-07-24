@@ -23,7 +23,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Count solved problems
+      - name: Count synced submissions
         id: count
         shell: bash
         run: |
@@ -38,15 +38,15 @@ jobs:
                   f"Could not find directory: {solutions_directory}"
               )
 
-          problem_directories = {
-              submission.parent
+          submissions = [
+              submission
               for submission in solutions_directory.rglob("submission-*")
               if submission.is_file()
-          }
+          ]
 
-          total = len(problem_directories)
+          total = len(submissions)
 
-          print(f"Solved problems: {total}")
+          print(f"Synced submissions: {total}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"total={total}\n")
