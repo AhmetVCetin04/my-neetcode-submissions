@@ -1,0 +1,66 @@
+name: Update NeetCode Progress
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Data Structures & Algorithms/**"
+
+  schedule:
+    - cron: "17 * * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-progress:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Count solved problems
+        id: count
+        shell: bash
+        run: |
+          python <<'PY'
+          import os
+          from pathlib import Path
+
+          solutions_directory = Path("Data Structures & Algorithms")
+
+          if not solutions_directory.exists():
+              raise SystemExit(
+                  f"Could not find directory: {solutions_directory}"
+              )
+
+          problem_directories = {
+              submission.parent
+              for submission in solutions_directory.rglob("submission-*")
+              if submission.is_file()
+          }
+
+          total = len(problem_directories)
+
+          print(f"Solved problems: {total}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"total={total}\n")
+          PY
+
+      - name: Update repository description
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+          DESCRIPTION: >-
+            NeetCode progress: ${{ steps.count.outputs.total }} problems solved
+        run: |
+          echo "Updating description to: $DESCRIPTION"
+
+          gh api \
+            --method PATCH \
+            "repos/${GITHUB_REPOSITORY}" \
+            -f description="$DESCRIPTION"
