@@ -22,16 +22,22 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Count synced submissions
-        id: count
+      - name: Count synced submissions and current streak
+        id: progress
         shell: bash
         run: |
           python <<'PY'
           import os
+          import subprocess
+          from datetime import datetime, timedelta
           from pathlib import Path
+          from zoneinfo import ZoneInfo
 
           solutions_directory = Path("Data Structures & Algorithms")
+          timezone = ZoneInfo("America/New_York")
 
           if not solutions_directory.exists():
               raise SystemExit(
@@ -48,15 +54,46 @@ jobs:
 
           print(f"Synced submissions: {total}")
 
+          log_output = subprocess.run(
+              [
+                  "git",
+                  "log",
+                  "--format=%cI",
+                  "--",
+                  str(solutions_directory),
+              ],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout
+
+          commit_days = {
+              datetime.fromisoformat(timestamp).astimezone(timezone).date()
+              for timestamp in log_output.splitlines()
+              if timestamp.strip()
+          }
+
+          today = datetime.now(timezone).date()
+          streak = 0
+          current_day = today
+
+          while current_day in commit_days:
+              streak += 1
+              current_day -= timedelta(days=1)
+
+          print(f"Current streak: {streak} days")
+
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"total={total}\n")
+              output.write(f"streak={streak}\n")
           PY
 
       - name: Update repository description
         env:
           GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
           DESCRIPTION: >-
-            NeetCode progress: ${{ steps.count.outputs.total }} problems solved
+            Current Streak: ${{ steps.progress.outputs.streak }} 🔥
+            | Problems Solved: ${{ steps.progress.outputs.total }} ✅
         run: |
           echo "Updating description to: $DESCRIPTION"
 
