@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "Data Structures & Algorithms/**"
+      - "**/submission-*"
 
   schedule:
     - cron: "17 * * * *"
@@ -36,23 +36,27 @@ jobs:
           from pathlib import Path
           from zoneinfo import ZoneInfo
 
-          solutions_directory = Path("Data Structures & Algorithms")
           timezone = ZoneInfo("America/New_York")
-
-          if not solutions_directory.exists():
-              raise SystemExit(
-                  f"Could not find directory: {solutions_directory}"
-              )
 
           submissions = [
               submission
-              for submission in solutions_directory.rglob("submission-*")
+              for submission in Path(".").rglob("submission-*")
               if submission.is_file()
           ]
+
+          if not submissions:
+              raise SystemExit("Could not find any synced submission files.")
 
           total = len(submissions)
 
           print(f"Synced submissions: {total}")
+
+          tracked_roots = sorted(
+              {
+                  submission.relative_to(Path(".")).parts[0]
+                  for submission in submissions
+              }
+          )
 
           log_output = subprocess.run(
               [
@@ -60,7 +64,7 @@ jobs:
                   "log",
                   "--format=%cI",
                   "--",
-                  str(solutions_directory),
+                  *tracked_roots,
               ],
               check=True,
               capture_output=True,
