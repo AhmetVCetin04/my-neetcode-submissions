@@ -38,25 +38,34 @@ jobs:
 
           timezone = ZoneInfo("America/New_York")
 
-          submissions = [
+          def submission_index(path: Path) -> int:
+              try:
+                  return int(path.stem.split("-")[-1])
+              except ValueError as exc:
+                  raise SystemExit(
+                      f"Could not parse submission index from {path}"
+                  ) from exc
+
+          all_submissions = [
               submission
               for submission in Path(".").rglob("submission-*")
               if submission.is_file()
           ]
 
-          if not submissions:
+          if not all_submissions:
               raise SystemExit("Could not find any synced submission files.")
 
-          total = len(submissions)
+          accepted_submissions_by_problem = {}
+          for submission in all_submissions:
+              problem = submission.parent.relative_to(Path("."))
+              current = accepted_submissions_by_problem.get(problem)
+              if current is None or submission_index(submission) > submission_index(current):
+                  accepted_submissions_by_problem[problem] = submission
 
-          print(f"Synced submissions: {total}")
+          accepted_submissions = sorted(accepted_submissions_by_problem.values())
+          total = len(accepted_submissions)
 
-          tracked_roots = sorted(
-              {
-                  submission.relative_to(Path(".")).parts[0]
-                  for submission in submissions
-              }
-          )
+          print(f"Problems solved: {total}")
 
           log_output = subprocess.run(
               [
@@ -64,7 +73,10 @@ jobs:
                   "log",
                   "--format=%cI",
                   "--",
-                  *tracked_roots,
+                  *[
+                      str(submission.relative_to(Path(".")))
+                      for submission in accepted_submissions
+                  ],
               ],
               check=True,
               capture_output=True,
