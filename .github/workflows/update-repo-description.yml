@@ -71,23 +71,44 @@ jobs:
               [
                   "git",
                   "log",
-                  "--format=%cI",
+                  "--format=__COMMIT__%cI",
+                  "--name-only",
                   "--",
-                  *[
-                      str(submission.relative_to(Path(".")))
-                      for submission in accepted_submissions
-                  ],
+                  ".",
               ],
               check=True,
               capture_output=True,
               text=True,
           ).stdout
 
-          commit_days = {
-              datetime.fromisoformat(timestamp).astimezone(timezone).date()
-              for timestamp in log_output.splitlines()
-              if timestamp.strip()
-          }
+          commit_days = set()
+          current_timestamp = None
+          touched_submission = False
+
+          for line in log_output.splitlines():
+              if line.startswith("__COMMIT__"):
+                  if current_timestamp and touched_submission:
+                      commit_days.add(
+                          datetime.fromisoformat(current_timestamp)
+                          .astimezone(timezone)
+                          .date()
+                      )
+                  current_timestamp = line.removeprefix("__COMMIT__")
+                  touched_submission = False
+                  continue
+
+              if not line.strip():
+                  continue
+
+              if Path(line).name.startswith("submission-"):
+                  touched_submission = True
+
+          if current_timestamp and touched_submission:
+              commit_days.add(
+                  datetime.fromisoformat(current_timestamp)
+                  .astimezone(timezone)
+                  .date()
+              )
 
           today = datetime.now(timezone).date()
           streak = 0
