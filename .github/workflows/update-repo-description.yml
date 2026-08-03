@@ -112,7 +112,7 @@ jobs:
 
           today = datetime.now(timezone).date()
           streak = 0
-          current_day = today
+          current_day = today if today in commit_days else today - timedelta(days=1)
 
           while current_day in commit_days:
               streak += 1
