@@ -130,7 +130,7 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
           DESCRIPTION: >-
             Current Streak 🔥: ${{ steps.progress.outputs.streak }}
-            | Problems Solved ✅: ${{ steps.progress.outputs.total }}
+            | Accepted Submissions ✅: ${{ steps.progress.outputs.total }}
         run: |
           echo "Updating description to: $DESCRIPTION"
 
